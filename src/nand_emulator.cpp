@@ -21,8 +21,6 @@ NandEmulator::NandEmulator(std::uint32_t block_count,
     }
     blocks_[bad.value].factory_bad = true;
 
-    // The factory marks a bad block with a non-0xFF byte at data byte 0 and spare byte 0 of its
-    // first page (datasheet section 10.2).
     auto marked = std::make_unique<StoredPage>();
     marked->data.fill(kErasedByte);
     marked->spare.fill(kErasedByte);
@@ -86,7 +84,7 @@ Status NandEmulator::erase_block(BlockNumber block_number) {
   if (block.factory_bad) return Status::kEraseFailed;
 
   for (std::uint32_t page = 0; page < kPagesPerBlock; ++page) {
-    pages_[PhysicalPage::in_block(block_number, page).value].reset();  // back to erased
+    pages_[PhysicalPage::in_block(block_number, page).value].reset();
   }
   block.next_page = 0;
   ++block.erase_count;
