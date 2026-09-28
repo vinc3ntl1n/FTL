@@ -26,7 +26,10 @@ if(FTL_WERROR)
   target_compile_options(ftl_warnings INTERFACE -Werror)
 endif()
 
-add_library(vincentftl src/version.cpp)
+# Every src/*.cpp is picked up automatically, like tests/, so adding a file
+# never means editing this list.
+file(GLOB library_sources CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+add_library(vincentftl ${library_sources})
 target_include_directories(vincentftl PUBLIC include)
 target_compile_definitions(vincentftl PRIVATE VINCENTFTL_VERSION="${PROJECT_VERSION}")
 target_link_libraries(vincentftl PRIVATE ftl_warnings)
