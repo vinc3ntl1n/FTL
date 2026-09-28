@@ -14,12 +14,13 @@ concurrency:
 permissions:
   contents: read
 
-# Branch protection requires these three job names. Renaming a job means
+# Pinned to Ubuntu 24.04 (GCC 13, Clang 18) so a runner upgrade can't turn CI
+# red mid-project. Branch protection requires these three job names. Renaming a job means
 # updating the required checks in the repo settings too.
 jobs:
   build-and-test:
     name: Build and test
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - name: Configure
@@ -31,7 +32,7 @@ jobs:
 
   sanitizers:
     name: Sanitizers (ASan + UBSan)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       CXX: clang++
     steps:
@@ -45,7 +46,7 @@ jobs:
 
   format:
     name: Format check
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
