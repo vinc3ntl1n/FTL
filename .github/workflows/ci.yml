@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to the same branch cancels the run it replaces.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+# Branch protection requires these three job names. Renaming a job means
+# updating the required checks in the repo settings too.
+jobs:
+  build-and-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: cmake --preset dev -DFTL_WERROR=ON
+      - name: Build
+        run: cmake --build --preset dev --parallel 4
+      - name: Test
+        run: ctest --preset dev
+
+  sanitizers:
+    name: Sanitizers (ASan + UBSan)
+    runs-on: ubuntu-latest
+    env:
+      CXX: clang++
+    steps:
+      - uses: actions/checkout@v7
+      - name: Configure
+        run: cmake --preset asan -DFTL_WERROR=ON
+      - name: Build
+        run: cmake --build --preset asan --parallel 4
+      - name: Test
+        run: ctest --preset asan
+
+  format:
+    name: Format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Install pinned clang-format
+        run: pip install "$(grep '^clang-format==' tools/requirements.txt)"
+      - name: Check formatting
+        run: tools/format.sh --check

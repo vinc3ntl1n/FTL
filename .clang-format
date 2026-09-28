@@ -1,0 +1,5 @@
+# Apply with tools/format.sh. CI fails any PR whose C++ isn't formatted.
+BasedOnStyle: Google
+ColumnLimit: 100
+DerivePointerAlignment: false
+PointerAlignment: Left

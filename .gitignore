@@ -1,0 +1,9 @@
+build/
+.venv/
+__pycache__/
+.cache/
+compile_commands.json
+.DS_Store
+.idea/
+.vscode/
+*.swp

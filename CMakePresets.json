@@ -1,0 +1,27 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": { "major": 3, "minor": 21, "patch": 0 },
+  "configurePresets": [
+    {
+      "name": "dev",
+      "displayName": "Debug build with tests",
+      "binaryDir": "${sourceDir}/build/dev",
+      "cacheVariables": { "CMAKE_BUILD_TYPE": "Debug" }
+    },
+    {
+      "name": "asan",
+      "displayName": "Debug build with AddressSanitizer + UndefinedBehaviorSanitizer",
+      "inherits": "dev",
+      "binaryDir": "${sourceDir}/build/asan",
+      "cacheVariables": { "FTL_SANITIZE": "ON" }
+    }
+  ],
+  "buildPresets": [
+    { "name": "dev", "configurePreset": "dev" },
+    { "name": "asan", "configurePreset": "asan" }
+  ],
+  "testPresets": [
+    { "name": "dev", "configurePreset": "dev", "output": { "outputOnFailure": true } },
+    { "name": "asan", "configurePreset": "asan", "output": { "outputOnFailure": true } }
+  ]
+}

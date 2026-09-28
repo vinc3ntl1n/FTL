@@ -1,0 +1,3 @@
+# Python tools, installed into .venv by setup.sh. CI reads the clang-format
+# pin from here too, so everyone formats with the exact same version.
+clang-format==23.1.1
