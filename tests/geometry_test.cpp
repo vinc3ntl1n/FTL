@@ -21,13 +21,13 @@ TEST(Geometry, FtlOwnsBytesTwoToSevenOfEachSpareGroup) {
   for (std::size_t i = 0; i < kPageSpareBytes; ++i) {
     if (!is_reserved_spare_byte(i)) ++ftl_bytes;
   }
-  EXPECT_EQ(ftl_bytes, 24);  // 4 groups x bytes 2-7
+  EXPECT_EQ(ftl_bytes, 24);
 
-  EXPECT_TRUE(is_reserved_spare_byte(0));    // bad-block marker
-  EXPECT_FALSE(is_reserved_spare_byte(2));   // first FTL byte
-  EXPECT_FALSE(is_reserved_spare_byte(7));   // last FTL byte
-  EXPECT_TRUE(is_reserved_spare_byte(8));    // ECC check bits
-  EXPECT_FALSE(is_reserved_spare_byte(18));  // byte 2 of the second group
+  EXPECT_TRUE(is_reserved_spare_byte(0));
+  EXPECT_FALSE(is_reserved_spare_byte(2));
+  EXPECT_FALSE(is_reserved_spare_byte(7));
+  EXPECT_TRUE(is_reserved_spare_byte(8));
+  EXPECT_FALSE(is_reserved_spare_byte(18));
 }
 
 TEST(Geometry, ErasedSpareIsAllFF) {
@@ -35,7 +35,6 @@ TEST(Geometry, ErasedSpareIsAllFF) {
 }
 
 TEST(Geometry, StatusesPrintTheirNames) {
-  // GoogleTest prints values this way when a check fails.
   EXPECT_EQ(testing::PrintToString(Status::kNotErased), "kNotErased");
   EXPECT_EQ(testing::PrintToString(FtlStatus::kNotWritten), "kNotWritten");
 }

@@ -5,7 +5,6 @@
 namespace vincentftl {
 
 std::string_view to_string(Status status) {
-  // No default case, so the compiler warns if a new Status is added without a name here.
   switch (status) {
     case Status::kOk:
       return "kOk";
