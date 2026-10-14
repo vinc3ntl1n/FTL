@@ -4,7 +4,7 @@ namespace vincentftl {
 
 PageFtl::PageFtl(NandDevice& device) : device_(device) {
 
-  for (uint32_t i = 0; i < device_.block_count(); ++i) {
+  for (std::uint32_t i = 0; i < device_.block_count(); ++i) {
     if (!device_.is_factory_bad(BlockNumber{i})) {
       capacity_ += kPagesPerBlock;
     }
