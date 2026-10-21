@@ -16,9 +16,9 @@ std::optional<std::string> run_differential(Ftl& subject, Ftl& reference, std::u
 
   std::mt19937 rng(seed);
 
-  for (std::uint32_t i = 0; i < operations; i++) {
+  for (std::uint32_t i = 0; i < operations; ++i) {
     bool current_op = ((rng() % 2) == 0);
-    const LogicalPage page{rng() % subject.capacity()};
+    const LogicalPage page{static_cast<std::uint32_t>(rng() % subject.capacity())};
 
     if (current_op == true) {
       PageData data;
