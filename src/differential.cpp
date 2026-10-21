@@ -16,14 +16,14 @@ std::optional<std::string> run_differential(Ftl& subject, Ftl& reference, std::u
 
   std::mt19937 rng(seed);
 
-  for (int i = 0; i < operations; i++) {
+  for (std::uint32_t i = 0; i < operations; i++) {
     bool current_op = ((rng() % 2) == 0);
     const LogicalPage page{rng() % subject.capacity()};
 
     if (current_op == true) {
       PageData data;
-      for (auto byte : data) {
-        byte = (std::uint8_t)(rng());
+      for (auto& byte : data) {
+        byte = static_cast<std::uint8_t>(rng());
       }
 
       const FtlStatus subject_status = subject.write(page, data);
@@ -51,7 +51,7 @@ std::optional<std::string> run_differential(Ftl& subject, Ftl& reference, std::u
             << "Subject Status: " << subject_status << std::endl
             << "Reference Status: " << ref_status << std::endl;
         return out.str();
-      } else if (subject_data != ref_data) {
+      } else if (subject_status == FtlStatus::kOk && subject_data != ref_data) {
         std::ostringstream out;
         out << "Ftl read data mismatch at operation number " << i << " and logical page number "
             << page.value << std::endl;
