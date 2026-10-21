@@ -1,12 +1,11 @@
-#include "vincentftl/reference_ftl.hpp"
-
 #include <gtest/gtest.h>
 
 #include "vincentftl/nand_emulator.hpp"
+#include "vincentftl/reference_ftl.hpp"
 
 namespace vincentftl {
 namespace {
-    // An FTL with a bug on purpose: it answers "ok" to every 50th write but forgets the data.
+// An FTL with a bug on purpose: it answers "ok" to every 50th write but forgets the data.
 class ForgetfulFtl final : public Ftl {
  public:
   explicit ForgetfulFtl(std::uint32_t capacity) : inner_(capacity) {}
@@ -73,9 +72,9 @@ TEST(Differential, CatchesAnFtlThatForgetsWrites) {
   ForgetfulFtl subject(64);
   ReferenceFtl reference(64);
 
-  //const auto mismatch = run_differential(subject, reference, 1, 10'000);
+  // const auto mismatch = run_differential(subject, reference, 1, 10'000);
 
-  //EXPECT_TRUE(mismatch.has_value());
+  // EXPECT_TRUE(mismatch.has_value());
 }
 
 }  // namespace
