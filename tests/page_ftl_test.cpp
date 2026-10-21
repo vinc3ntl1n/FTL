@@ -41,6 +41,7 @@ class FailingDevice final : public NandDevice {
   NandEmulator& real_;
 };
 
+// No bad blocks, so every page counts.
 TEST(PageFtl, CapacityIsAllPages) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -48,6 +49,7 @@ TEST(PageFtl, CapacityIsAllPages) {
   EXPECT_EQ(ftl.capacity(), 4 * kPagesPerBlock);
 }
 
+// Each bad block takes 64 pages off the capacity.
 TEST(PageFtl, CapacitySkipsBadBlocks) {
   NandEmulator device(8, {BlockNumber{2}, BlockNumber{5}});
   PageFtl ftl(device);
@@ -55,6 +57,7 @@ TEST(PageFtl, CapacitySkipsBadBlocks) {
   EXPECT_EQ(ftl.capacity(), 6 * kPagesPerBlock);
 }
 
+// Basic write, then read it back.
 TEST(PageFtl, ReadReturnsWhatWasWritten) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -65,6 +68,7 @@ TEST(PageFtl, ReadReturnsWhatWasWritten) {
   EXPECT_EQ(out, make_page(1));
 }
 
+// Nothing written yet, so there's no mapping to read from.
 TEST(PageFtl, ReadOfUnwrittenPageFails) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -73,6 +77,7 @@ TEST(PageFtl, ReadOfUnwrittenPageFails) {
   EXPECT_EQ(ftl.read(LogicalPage{0}, out), FtlStatus::kNotWritten);
 }
 
+// Logical pages aren't written in order. Check the map doesn't mix them up.
 TEST(PageFtl, PagesWrittenOutOfOrderStayApart) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -89,6 +94,7 @@ TEST(PageFtl, PagesWrittenOutOfOrderStayApart) {
   EXPECT_EQ(out, make_page(1));
 }
 
+// Write the same page twice, read should give the second one.
 TEST(PageFtl, OverwriteReturnsNewData) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -100,6 +106,7 @@ TEST(PageFtl, OverwriteReturnsNewData) {
   EXPECT_EQ(out, make_page(2));
 }
 
+// An overwrite has to go to a new physical page.
 TEST(PageFtl, OverwriteUsesANewPhysicalPage) {
   // NAND can't program the same page twice without an erase.
   NandEmulator device(4);
@@ -111,6 +118,7 @@ TEST(PageFtl, OverwriteUsesANewPhysicalPage) {
   EXPECT_EQ(device.pages_programmed(), 2u);
 }
 
+// Edge case: capacity - 1 is the last valid address.
 TEST(PageFtl, LastPageWorks) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -123,6 +131,7 @@ TEST(PageFtl, LastPageWorks) {
   EXPECT_EQ(out, make_page(1));
 }
 
+// capacity is one past the end. The device shouldn't be touched.
 TEST(PageFtl, WritePastEndIsBadAddress) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -131,6 +140,7 @@ TEST(PageFtl, WritePastEndIsBadAddress) {
   EXPECT_EQ(device.pages_programmed(), 0u);
 }
 
+// Same bounds check, for reads.
 TEST(PageFtl, ReadPastEndIsBadAddress) {
   NandEmulator device(4);
   PageFtl ftl(device);
@@ -139,6 +149,7 @@ TEST(PageFtl, ReadPastEndIsBadAddress) {
   EXPECT_EQ(ftl.read(LogicalPage{ftl.capacity()}, out), FtlStatus::kBadAddress);
 }
 
+// Bad blocks in the middle of the chip get skipped.
 TEST(PageFtl, NeverWritesToBadBlocks) {
   // The emulator fails programs on bad blocks, so a full fill means we skipped them.
   NandEmulator device(6, {BlockNumber{1}, BlockNumber{4}});
@@ -153,6 +164,7 @@ TEST(PageFtl, NeverWritesToBadBlocks) {
   EXPECT_EQ(out, make_page(static_cast<std::uint8_t>(ftl.capacity() - 1)));
 }
 
+// Same, but the bad block is the last one on the chip.
 TEST(PageFtl, BadBlockAtTheEndIsSkipped) {
   NandEmulator device(3, {BlockNumber{2}});
   PageFtl ftl(device);
@@ -162,6 +174,7 @@ TEST(PageFtl, BadBlockAtTheEndIsSkipped) {
   }
 }
 
+// Fill the device, then write once more. Should get kNoSpace.
 TEST(PageFtl, NoSpaceWhenAllPagesAreUsed) {
   // No garbage collection yet, so an overwrite uses up a new page.
   NandEmulator device(2);
@@ -173,6 +186,7 @@ TEST(PageFtl, NoSpaceWhenAllPagesAreUsed) {
   EXPECT_EQ(ftl.write(LogicalPage{0}, make_page(2)), FtlStatus::kNoSpace);
 }
 
+// A write that fails for no space shouldn't lose the old data.
 TEST(PageFtl, NoSpaceKeepsOldData) {
   NandEmulator device(2);
   PageFtl ftl(device);
@@ -186,6 +200,7 @@ TEST(PageFtl, NoSpaceKeepsOldData) {
   EXPECT_EQ(out, make_page(1));
 }
 
+// Program fails. We return kDeviceError and don't map the page.
 TEST(PageFtl, ProgramFailureIsDeviceError) {
   NandEmulator real(4);
   FailingDevice device(real);
@@ -198,6 +213,7 @@ TEST(PageFtl, ProgramFailureIsDeviceError) {
   EXPECT_EQ(ftl.read(LogicalPage{0}, out), FtlStatus::kNotWritten);
 }
 
+// Program fails on an overwrite. The old data should still be readable.
 TEST(PageFtl, FailedOverwriteKeepsOldData) {
   NandEmulator real(4);
   FailingDevice device(real);
@@ -212,6 +228,7 @@ TEST(PageFtl, FailedOverwriteKeepsOldData) {
   EXPECT_EQ(out, make_page(1));
 }
 
+// The device read fails after a good write.
 TEST(PageFtl, ReadFailureIsDeviceError) {
   NandEmulator real(4);
   FailingDevice device(real);
