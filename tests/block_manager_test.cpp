@@ -91,7 +91,7 @@ TEST(BlockManager, CountsLivePagesPerBlock) {  // test 4
   EXPECT_TRUE(blocks.is_valid(*second));
 }
 
-TEST(BlockManager, MarkingAPageInvalidTwiceCountsOnce) {
+TEST(BlockManager, MarkingAPageInvalidTwiceCountsOnce) {  // test 5
   NandEmulator device(4);
   BlockManager blocks(device);
 
@@ -117,6 +117,53 @@ TEST(BlockManager, MarkingAPageInvalidTwiceCountsOnce) {
   const auto next = blocks.allocate_page();
   ASSERT_TRUE(next.has_value());
   EXPECT_NE(next->value, page->value);
+}
+
+TEST(BlockManager, APageNeverHandedOutIsNotValid) {  // test 6
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  for (std::uint32_t b = 0; b < 4; ++b) {
+    EXPECT_EQ(blocks.valid_pages(BlockNumber{b}), 0u);
+
+    for (std::uint32_t n = 0; n < kPagesPerBlock; ++n) {
+      const auto page = PhysicalPage::in_block(BlockNumber{b}, n);
+      EXPECT_FALSE(blocks.is_valid(page));
+    }
+  }
+
+  // invalidating an unallocated page should change nothing.
+  const auto unused = PhysicalPage::in_block(BlockNumber{0}, 10);
+  blocks.mark_invalid(unused);
+
+  EXPECT_EQ(blocks.valid_pages(BlockNumber{0}), 0u);
+  EXPECT_EQ(blocks.free_block_count(), 4u);
+}
+
+TEST(BlockManager, FreeBlockCountDropsWhenABlockIsOpened) {  // test 7
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  EXPECT_EQ(blocks.free_block_count(), 4u);
+
+  for (std::uint32_t b = 0; b < 4; ++b) {
+    // before opening this block, it is still counted as free.
+    EXPECT_EQ(blocks.free_block_count(), 4u - b);
+
+    for (std::uint32_t n = 0; n < kPagesPerBlock; ++n) {
+      const auto page = blocks.allocate_page();
+      ASSERT_TRUE(page.has_value());
+
+      EXPECT_EQ(page->block().value, b);
+
+      // only the first allocation in each block decreases the count.
+      EXPECT_EQ(blocks.free_block_count(), 3u - b);
+    }
+  }
+
+  EXPECT_EQ(blocks.free_block_count(), 0u);
+  EXPECT_FALSE(blocks.allocate_page().has_value());
+  EXPECT_EQ(blocks.free_block_count(), 0u);
 }
 
 }  // namespace
