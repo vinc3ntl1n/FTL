@@ -19,13 +19,11 @@ void fill_blocks(BlockManager& blocks, std::uint32_t count) {
   }
 }
 
-
 void mark_pages_invalid(BlockManager& blocks, BlockNumber block, std::uint32_t count) {
   for (std::uint32_t n = 0; n < count; ++n) {
     blocks.mark_invalid(PhysicalPage::in_block(block, n));
   }
 }
-
 
 TEST(BlockManager, PicksTheFullBlockWithTheFewestLivePages) {
   NandEmulator device(4);
@@ -34,7 +32,6 @@ TEST(BlockManager, PicksTheFullBlockWithTheFewestLivePages) {
   mark_pages_invalid(blocks, BlockNumber{0}, 3);
   mark_pages_invalid(blocks, BlockNumber{1}, 10);
   mark_pages_invalid(blocks, BlockNumber{2}, 5);
-
 
   EXPECT_EQ(blocks.pick_victim(), BlockNumber{1});
 }
@@ -46,7 +43,7 @@ TEST(BlockManager, PicksNothingWhenNoBlockIsFull) {
   EXPECT_FALSE(blocks.pick_victim().has_value());
 }
 
-TEST(BlockManager,NeverPicksTheOpenBlock) {
+TEST(BlockManager, NeverPicksTheOpenBlock) {
   NandEmulator device(4);
   BlockManager blocks(device);
 

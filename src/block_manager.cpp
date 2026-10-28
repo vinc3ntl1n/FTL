@@ -75,5 +75,27 @@ std::optional<BlockNumber> BlockManager::pick_victim() const {
   }
 
   return victim;
+}
 
+void BlockManager::block_erased(BlockNumber block) {
+  int index = block.value;
+  if (index > int(blocks_.size())) {
+    return;
+  } else if (blocks_[index].state != BlockState::kFull) {
+    return;
+  } else if (valid_pages(block) != 0) {
+    return;
+  }
+  this->free_blocks_++;
+  this->blocks_[index].erase_count++;
+  this->blocks_[index].state = BlockState::kFree;
+  return;
+};
+
+std::uint32_t BlockManager::erase_count(BlockNumber block) const {
+  if (block.value > blocks_.size()) {
+    return 0;
+  }
+  return blocks_[block.value].erase_count;
+}
 }  // namespace vincentftl
