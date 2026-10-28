@@ -1,8 +1,6 @@
 #pragma once
 
 
-#include <cstdint>
-#include <optional>
 #include <vector>
 
 
@@ -15,37 +13,24 @@
 namespace vincentftl {
 
 
-// Good blocks the FTL keeps back from the user, so garbage collection always has somewhere to copy
-// live pages to.
-inline constexpr std::uint32_t kReserveBlocks = 3;
-
-
-// The FTL: remembers where the newest copy of every logical page lives on the chip.
-class PageFtl final : public Ftl {
- public:
-  explicit PageFtl(NandDevice& device);
-
-
-  std::uint32_t capacity() const override;
-  FtlStatus write(LogicalPage page, const PageData& data) override;
-  FtlStatus read(LogicalPage page, PageData& data) override;
-  FtlStatus mount() override;
-
-
- private:
-  // Runs garbage collection until at least two blocks are free.
-  FtlStatus make_room();
-
-
-  NandDevice& device_;
-  BlockManager blocks_;
-  std::uint32_t capacity_ = 0;
-  // The mapping table: one entry per logical page. Empty means "never written".
-  std::vector<std::optional<PhysicalPage>> map_;
-  // The reverse of the mapping table: one entry per physical page, saying which logical page's
-  // data it holds. Only meaningful while the physical page is live.
-  std::vector<LogicalPage> owner_;
+// One live page that garbage collection copied to a new place.
+struct PageMove {
+  PhysicalPage from;
+  PhysicalPage to;
 };
+
+
+// Cleans one block so it can be used again. Copies every live page in `victim` to a blank page
+// from `blocks`, marks the old copy as garbage, then erases `victim`. Adds one entry to `moves` for
+// every page it copies, so the FTL can update its mapping table.
+//
+// It does not tell `blocks` that the victim is blank again. The caller does that with
+// block_erased once this returns kOk.
+//
+// Returns kOk, kNoSpace if it ran out of blank pages to copy into, or kDeviceError if the chip
+// reported a failure.
+FtlStatus collect_block(NandDevice& device, BlockManager& blocks, BlockNumber victim,
+                        std::vector<PageMove>& moves);
 
 
 }  // namespace vincentftl
