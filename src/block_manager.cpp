@@ -62,4 +62,18 @@ unsigned BlockManager::valid_pages(BlockNumber number) const {
 
 unsigned BlockManager::free_block_count() const { return free_blocks_; }
 
+std::optional<BlockNumber> BlockManager::pick_victim() const {
+  std::optional<BlockNumber> victim=std::nullopt;
+  unsigned fewest_live_pages = kPagesPerBlock;
+
+  for (unsigned i = 0; i < blocks_.size(); ++i) {
+    const Block& block = blocks_[i];
+    if (block.state == BlockState::kFull && block.valid_pages < fewest_live_pages) {
+      victim = BlockNumber{i};
+      fewest_live_pages = block.valid_pages;
+    }
+  }
+
+  return victim;
+
 }  // namespace vincentftl
