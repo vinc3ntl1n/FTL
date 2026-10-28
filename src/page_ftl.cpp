@@ -3,19 +3,15 @@
 namespace vincentftl {
 
 PageFtl::PageFtl(NandDevice& device) : device_(device) {
-
   for (std::uint32_t i = 0; i < device_.block_count(); ++i) {
     if (!device_.is_factory_bad(BlockNumber{i})) {
       capacity_ += kPagesPerBlock;
     }
   }
   map_.resize(capacity_, std::nullopt);
-  
 }
 
-std::uint32_t PageFtl::capacity() const {
-  return capacity_;
-}
+std::uint32_t PageFtl::capacity() const { return capacity_; }
 
 FtlStatus PageFtl::write(LogicalPage page, const PageData& data) {
   if (page.value >= capacity_) {
@@ -57,8 +53,6 @@ FtlStatus PageFtl::read(LogicalPage page, PageData& data) {
   return FtlStatus::kOk;
 }
 
-FtlStatus PageFtl::mount() {
-  return FtlStatus::kOk;
-}
+FtlStatus PageFtl::mount() { return FtlStatus::kOk; }
 
 }  // namespace vincentftl
