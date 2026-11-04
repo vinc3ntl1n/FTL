@@ -63,7 +63,7 @@ unsigned BlockManager::valid_pages(BlockNumber number) const {
 unsigned BlockManager::free_block_count() const { return free_blocks_; }
 
 std::optional<BlockNumber> BlockManager::pick_victim() const {
-  std::optional<BlockNumber> victim=std::nullopt;
+  std::optional<BlockNumber> victim = std::nullopt;
   unsigned fewest_live_pages = kPagesPerBlock;
 
   for (unsigned i = 0; i < blocks_.size(); ++i) {
@@ -78,22 +78,18 @@ std::optional<BlockNumber> BlockManager::pick_victim() const {
 }
 
 void BlockManager::block_erased(BlockNumber block) {
-  int index = block.value;
-  if (index > int(blocks_.size())) {
-    return;
-  } else if (blocks_[index].state != BlockState::kFull) {
-    return;
-  } else if (valid_pages(block) != 0) {
-    return;
-  }
-  this->free_blocks_++;
-  this->blocks_[index].erase_count++;
-  this->blocks_[index].state = BlockState::kFree;
-  return;
-};
+  if (block.value >= blocks_.size()) return;
+
+  Block& entry = blocks_[block.value];
+  if (entry.state != BlockState::kFull || entry.valid_pages != 0) return;
+
+  ++free_blocks_;
+  ++entry.erase_count;
+  entry.state = BlockState::kFree;
+}
 
 std::uint32_t BlockManager::erase_count(BlockNumber block) const {
-  if (block.value > blocks_.size()) {
+  if (block.value >= blocks_.size()) {
     return 0;
   }
   return blocks_[block.value].erase_count;
