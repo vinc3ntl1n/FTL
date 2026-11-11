@@ -32,5 +32,9 @@ target_include_directories(vincentftl PUBLIC include)
 target_compile_definitions(vincentftl PRIVATE VINCENTFTL_VERSION="${PROJECT_VERSION}")
 target_link_libraries(vincentftl PRIVATE ftl_warnings)
 
+# Runs the FTL on the emulator or the real chip and prints the results. See tools/ftl_run.cpp.
+add_executable(ftl_run tools/ftl_run.cpp)
+target_link_libraries(ftl_run PRIVATE vincentftl ftl_warnings)
+
 enable_testing()
 add_subdirectory(tests)
