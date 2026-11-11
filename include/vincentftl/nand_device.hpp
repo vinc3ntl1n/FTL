@@ -16,6 +16,8 @@ enum class Status {
   kNotErased,
   kOutOfOrder,
   kReservedSpareByte,
+  // The real chip stayed busy for too long. Usually a loose wire.
+  kTimeout,
 };
 
 std::string_view to_string(Status status);
