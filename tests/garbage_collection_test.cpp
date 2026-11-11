@@ -168,9 +168,9 @@ TEST(GarbageCollection, ErasedVictimCanBeProgrammedFromPageZero) {  // test 4
     EXPECT_EQ(data, erased);
     EXPECT_EQ(spare, erased_spare());
   }
-  EXPECT_EQ(device.program_page(PhysicalPage::in_block(BlockNumber{0}, 0), data_for(1),
-                                erased_spare()),
-            Status::kOk);
+  EXPECT_EQ(
+      device.program_page(PhysicalPage::in_block(BlockNumber{0}, 0), data_for(1), erased_spare()),
+      Status::kOk);
 }
 
 TEST(GarbageCollection, AddsToMovesWithoutClearingIt) {  // test 5
@@ -207,7 +207,7 @@ TEST(GarbageCollection, NoBlankPagesLeavesTheVictimAlone) {  // test 6
 TEST(GarbageCollection, RunningOutHalfwayKeepsUncopiedPagesLive) {  // test 7
   NandEmulator device(2);
   BlockManager blocks(device);
-  write_pages(device, blocks, kPagesPerBlock);       // block 0, all live
+  write_pages(device, blocks, kPagesPerBlock);      // block 0, all live
   write_pages(device, blocks, kPagesPerBlock - 4);  // block 1, 4 blank pages left
 
   std::vector<PageMove> moves;
@@ -288,8 +288,8 @@ TEST(GarbageCollection, NeverCopiesIntoTheVictimItself) {  // test 11
 
   // Whatever it returns, no live page may end up in the block that gets erased.
   for (const PageMove& move : moves) {
-    EXPECT_NE(move.to.block(), BlockNumber{0}) << "page " << move.from.value
-                                               << " was copied into the victim";
+    EXPECT_NE(move.to.block(), BlockNumber{0})
+        << "page " << move.from.value << " was copied into the victim";
   }
   if (status == FtlStatus::kOk) {
     for (const PageMove& move : moves) {

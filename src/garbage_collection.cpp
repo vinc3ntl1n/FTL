@@ -4,6 +4,12 @@ namespace vincentftl {
 
 FtlStatus collect_block(NandDevice& device, BlockManager& blocks, BlockNumber victim,
                         std::vector<PageMove>& moves) {
+  // The copies go into the open block. If the victim were the open block, they would land in the
+  // block about to be erased, and the data would be lost.
+  if (!blocks.is_full(victim)) {
+    return FtlStatus::kBadAddress;
+  }
+
   for (std::uint32_t n = 0; n < kPagesPerBlock; ++n) {
     const PhysicalPage from = PhysicalPage::in_block(victim, n);
 
