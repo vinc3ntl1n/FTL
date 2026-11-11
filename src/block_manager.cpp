@@ -62,6 +62,10 @@ unsigned BlockManager::valid_pages(BlockNumber number) const {
 
 unsigned BlockManager::free_block_count() const { return free_blocks_; }
 
+bool BlockManager::is_full(BlockNumber block) const {
+  return block.value < blocks_.size() && blocks_[block.value].state == BlockState::kFull;
+}
+
 std::optional<BlockNumber> BlockManager::pick_victim() const {
   std::optional<BlockNumber> victim = std::nullopt;
   unsigned fewest_live_pages = kPagesPerBlock;

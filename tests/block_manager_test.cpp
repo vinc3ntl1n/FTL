@@ -63,6 +63,20 @@ TEST(BlockManager, NeverPicksTheOpenBlock) {
   EXPECT_EQ(blocks.pick_victim(), BlockNumber{0});
 }
 
+TEST(BlockManager, OnlyABlockWithEveryPageHandedOutIsFull) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  EXPECT_FALSE(blocks.is_full(BlockNumber{0}));  // free
+  fill_blocks(blocks, 1);
+  ASSERT_TRUE(blocks.allocate_page().has_value());
+
+  EXPECT_TRUE(blocks.is_full(BlockNumber{0}));
+  EXPECT_FALSE(blocks.is_full(BlockNumber{1}));    // open
+  EXPECT_FALSE(blocks.is_full(BlockNumber{2}));    // free
+  EXPECT_FALSE(blocks.is_full(BlockNumber{999}));  // past the end of the chip
+}
+
 TEST(BlockManager, PicksNothingWhenEveryFullBlockIsAllLive) {
   NandEmulator device(4);
   BlockManager blocks(device);

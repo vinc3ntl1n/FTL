@@ -28,6 +28,10 @@ class BlockManager {
   // How many good blocks have not been opened yet.
   std::uint32_t free_block_count() const;
 
+  // True if every page in this block has been handed out. Only a full block can be cleaned by
+  // garbage collection: the open block is still taking new pages, so GC would copy into it.
+  bool is_full(BlockNumber block) const;
+
   // The full block with the fewest live pages: the cheapest one for garbage collection to clean.
   // Nothing if no block is full, or if every full block is completely live, since cleaning one of
   // those would free nothing. Ties go to the lowest-numbered block.
