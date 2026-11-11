@@ -1,5 +1,7 @@
 #include "vincentftl/page_ftl.hpp"
 
+#include "vincentftl/garbage_collection.hpp"
+
 namespace vincentftl {
 
 PageFtl::PageFtl(NandDevice& device) : device_(device), blocks_(device) {
@@ -20,9 +22,41 @@ PageFtl::PageFtl(NandDevice& device) : device_(device), blocks_(device) {
 
 std::uint32_t PageFtl::capacity() const { return capacity_; }
 
+FtlStatus PageFtl::make_room() {
+  while (blocks_.free_block_count() < 2) {
+    const auto victim = blocks_.pick_victim();
+    if (!victim) {
+      return FtlStatus::kNoSpace;
+    }
+
+    std::vector<PageMove> moves;
+    const FtlStatus status = collect_block(device_, blocks_, *victim, moves);
+
+    // Even a failed collection may have successfully moved some pages.
+    for (const auto& move : moves) {
+      const LogicalPage logical = owner_[move.from.value];
+      map_[logical.value] = move.to;
+      owner_[move.to.value] = logical;
+    }
+
+    if (status != FtlStatus::kOk) {
+      return status;
+    }
+
+    blocks_.block_erased(*victim);
+  }
+
+  return FtlStatus::kOk;
+}
+
 FtlStatus PageFtl::write(LogicalPage page, const PageData& data) {
   if (page.value >= capacity_) {
     return FtlStatus::kBadAddress;
+  }
+
+  const FtlStatus status = make_room();
+  if (status != FtlStatus::kOk) {
+    return status;
   }
 
   const auto target = blocks_.allocate_page();
