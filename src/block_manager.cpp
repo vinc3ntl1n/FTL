@@ -1,5 +1,7 @@
 #include "vincentftl/block_manager.hpp"
 
+#include <algorithm>
+
 namespace vincentftl {
 
 using std::nullopt;
@@ -20,14 +22,19 @@ BlockManager::BlockManager(NandDevice& nand) {
 
 optional<PhysicalPage> BlockManager::allocate_page() {
   if (!open_block_) {
+    std::optional<BlockNumber> selected;
     for (unsigned i = 0; i < blocks_.size(); ++i) {
-      if (blocks_[i].state == BlockState::kFree) {
-        blocks_[i].state = BlockState::kOpen;
-        open_block_ = BlockNumber{i};
-        next_page_in_open_block_ = 0;
-        --free_blocks_;
-        break;
+      if (blocks_[i].state != BlockState::kFree) continue;
+      if (!selected ||
+          (least_worn_first_ && blocks_[i].erase_count < blocks_[selected->value].erase_count)) {
+        selected = BlockNumber{i};
       }
+    }
+    if (selected) {
+      blocks_[selected->value].state = BlockState::kOpen;
+      open_block_ = selected;
+      next_page_in_open_block_ = 0;
+      --free_blocks_;
     }
     if (!open_block_) return nullopt;
   }
@@ -97,5 +104,29 @@ std::uint32_t BlockManager::erase_count(BlockNumber block) const {
     return 0;
   }
   return blocks_[block.value].erase_count;
+}
+
+void BlockManager::prefer_least_worn(bool on) { least_worn_first_ = on; }
+
+std::optional<BlockNumber> BlockManager::pick_coldest() const {
+  std::optional<BlockNumber> coldest;
+  for (unsigned i = 0; i < blocks_.size(); ++i) {
+    const Block& block = blocks_[i];
+    if (block.state != BlockState::kFull) continue;
+    if (!coldest || block.erase_count < blocks_[coldest->value].erase_count) {
+      coldest = BlockNumber{i};
+    }
+  }
+  return coldest;
+}
+
+std::uint32_t BlockManager::max_erase_count() const {
+  std::uint32_t maximum = 0;
+  for (const Block& block : blocks_) {
+    if (block.state != BlockState::kBad) {
+      maximum = std::max(maximum, block.erase_count);
+    }
+  }
+  return maximum;
 }
 }  // namespace vincentftl

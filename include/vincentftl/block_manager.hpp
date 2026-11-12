@@ -44,6 +44,10 @@ class BlockManager {
   // How many times this block has been erased since the manager was created.
   std::uint32_t erase_count(BlockNumber block) const;
 
+  void prefer_least_worn(bool on);
+  std::optional<BlockNumber> pick_coldest() const;
+  std::uint32_t max_erase_count() const;
+
  private:
   enum class BlockState { kBad, kFree, kOpen, kFull };
 
@@ -61,6 +65,7 @@ class BlockManager {
   std::optional<BlockNumber> open_block_;
   std::uint32_t next_page_in_open_block_ = 0;
   std::uint32_t free_blocks_ = 0;
+  bool least_worn_first_ = false;
 };
 
 }  // namespace vincentftl
