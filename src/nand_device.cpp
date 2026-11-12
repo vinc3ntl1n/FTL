@@ -20,6 +20,8 @@ std::string_view to_string(Status status) {
       return "kOutOfOrder";
     case Status::kReservedSpareByte:
       return "kReservedSpareByte";
+    case Status::kTimeout:
+      return "kTimeout";
   }
   return "(unknown Status)";
 }

@@ -10,7 +10,148 @@
 namespace vincentftl {
 namespace {
 
-constexpr std::uint32_t kPagesPerBlock = 64;
+// Hands out `count` blocks' worth of pages, making those blocks full and all live.
+void fill_blocks(BlockManager& blocks, std::uint32_t count) {
+  for (std::uint32_t i = 0; i < count * kPagesPerBlock; ++i) {
+    ASSERT_TRUE(blocks.allocate_page().has_value()) << "allocation " << i;
+  }
+}
+
+void mark_pages_invalid(BlockManager& blocks, BlockNumber block, std::uint32_t count) {
+  for (std::uint32_t n = 0; n < count; ++n) {
+    blocks.mark_invalid(PhysicalPage::in_block(block, n));
+  }
+}
+
+TEST(BlockManager, PicksTheFullBlockWithTheFewestLivePages) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+  fill_blocks(blocks, 3);
+  mark_pages_invalid(blocks, BlockNumber{0}, 3);
+  mark_pages_invalid(blocks, BlockNumber{1}, 10);
+  mark_pages_invalid(blocks, BlockNumber{2}, 5);
+
+  EXPECT_EQ(blocks.pick_victim(), BlockNumber{1});
+}
+
+TEST(BlockManager, PicksNothingWhenNoBlockIsFull) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  EXPECT_FALSE(blocks.pick_victim().has_value());
+
+  for (std::uint32_t n = 0; n < 10; ++n) {
+    ASSERT_TRUE(blocks.allocate_page().has_value());
+  }
+  mark_pages_invalid(blocks, BlockNumber{0}, 10);
+
+  EXPECT_EQ(blocks.valid_pages(BlockNumber{0}), 0u);
+  EXPECT_FALSE(blocks.pick_victim().has_value());
+}
+
+TEST(BlockManager, NeverPicksTheOpenBlock) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  fill_blocks(blocks, 1);
+  mark_pages_invalid(blocks, BlockNumber{0}, 1);
+  for (std::uint32_t n = 0; n < 10; ++n) {
+    ASSERT_TRUE(blocks.allocate_page().has_value());
+  }
+  mark_pages_invalid(blocks, BlockNumber{1}, 10);
+
+  EXPECT_EQ(blocks.pick_victim(), BlockNumber{0});
+}
+
+TEST(BlockManager, OnlyABlockWithEveryPageHandedOutIsFull) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  EXPECT_FALSE(blocks.is_full(BlockNumber{0}));  // free
+  fill_blocks(blocks, 1);
+  ASSERT_TRUE(blocks.allocate_page().has_value());
+
+  EXPECT_TRUE(blocks.is_full(BlockNumber{0}));
+  EXPECT_FALSE(blocks.is_full(BlockNumber{1}));    // open
+  EXPECT_FALSE(blocks.is_full(BlockNumber{2}));    // free
+  EXPECT_FALSE(blocks.is_full(BlockNumber{999}));  // past the end of the chip
+}
+
+TEST(BlockManager, PicksNothingWhenEveryFullBlockIsAllLive) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  fill_blocks(blocks, 2);
+
+  EXPECT_FALSE(blocks.pick_victim().has_value());
+}
+
+TEST(BlockManager, AnErasedBlockIsHandedOutAgain) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  fill_blocks(blocks, 4);
+  PageData data{};
+  const auto first_page = PhysicalPage::in_block(BlockNumber{1}, 0);
+  ASSERT_EQ(device.program_page(first_page, data, erased_spare()), Status::kOk);
+  mark_pages_invalid(blocks, BlockNumber{1}, kPagesPerBlock);
+
+  ASSERT_EQ(device.erase_block(BlockNumber{1}), Status::kOk);
+  blocks.block_erased(BlockNumber{1});
+
+  EXPECT_EQ(blocks.free_block_count(), 1u);
+
+  const auto page = blocks.allocate_page();
+  ASSERT_TRUE(page.has_value());
+  EXPECT_EQ(*page, first_page);
+  EXPECT_EQ(device.program_page(*page, data, erased_spare()), Status::kOk);
+}
+
+TEST(BlockManager, CountsErasesPerBlock) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  fill_blocks(blocks, 4);
+  mark_pages_invalid(blocks, BlockNumber{1}, kPagesPerBlock);
+  ASSERT_EQ(device.erase_block(BlockNumber{1}), Status::kOk);
+  blocks.block_erased(BlockNumber{1});
+
+  EXPECT_EQ(blocks.erase_count(BlockNumber{1}), 1u);
+  for (std::uint32_t b : {0u, 2u, 3u}) {
+    EXPECT_EQ(blocks.erase_count(BlockNumber{b}), 0u);
+  }
+
+  fill_blocks(blocks, 1);
+  mark_pages_invalid(blocks, BlockNumber{1}, kPagesPerBlock);
+  ASSERT_EQ(device.erase_block(BlockNumber{1}), Status::kOk);
+  blocks.block_erased(BlockNumber{1});
+
+  EXPECT_EQ(blocks.erase_count(BlockNumber{1}), 2u);
+  for (std::uint32_t b : {0u, 2u, 3u}) {
+    EXPECT_EQ(blocks.erase_count(BlockNumber{b}), 0u);
+  }
+}
+
+TEST(BlockManager, IgnoresAnEraseOfABlockThatStillHasLivePages) {
+  NandEmulator device(4);
+  BlockManager blocks(device);
+
+  fill_blocks(blocks, 1);
+  mark_pages_invalid(blocks, BlockNumber{0}, kPagesPerBlock - 1);
+  for (std::uint32_t n = 0; n < 10; ++n) {
+    ASSERT_TRUE(blocks.allocate_page().has_value());
+  }
+  mark_pages_invalid(blocks, BlockNumber{1}, 10);
+
+  for (std::uint32_t b : {0u, 1u}) {
+    blocks.block_erased(BlockNumber{b});
+    EXPECT_EQ(blocks.free_block_count(), 2u);
+    EXPECT_EQ(blocks.erase_count(BlockNumber{0}), 0u);
+    EXPECT_EQ(blocks.erase_count(BlockNumber{1}), 0u);
+    EXPECT_EQ(blocks.valid_pages(BlockNumber{0}), 1u);
+    EXPECT_EQ(blocks.valid_pages(BlockNumber{1}), 0u);
+  }
+}
 
 TEST(BlockManager, HandsOutEveryPageExactlyOnce) {  // test 1
   NandEmulator device(4);

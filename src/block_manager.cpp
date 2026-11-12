@@ -62,4 +62,40 @@ unsigned BlockManager::valid_pages(BlockNumber number) const {
 
 unsigned BlockManager::free_block_count() const { return free_blocks_; }
 
+bool BlockManager::is_full(BlockNumber block) const {
+  return block.value < blocks_.size() && blocks_[block.value].state == BlockState::kFull;
+}
+
+std::optional<BlockNumber> BlockManager::pick_victim() const {
+  std::optional<BlockNumber> victim = std::nullopt;
+  unsigned fewest_live_pages = kPagesPerBlock;
+
+  for (unsigned i = 0; i < blocks_.size(); ++i) {
+    const Block& block = blocks_[i];
+    if (block.state == BlockState::kFull && block.valid_pages < fewest_live_pages) {
+      victim = BlockNumber{i};
+      fewest_live_pages = block.valid_pages;
+    }
+  }
+
+  return victim;
+}
+
+void BlockManager::block_erased(BlockNumber block) {
+  if (block.value >= blocks_.size()) return;
+
+  Block& entry = blocks_[block.value];
+  if (entry.state != BlockState::kFull || entry.valid_pages != 0) return;
+
+  ++free_blocks_;
+  ++entry.erase_count;
+  entry.state = BlockState::kFree;
+}
+
+std::uint32_t BlockManager::erase_count(BlockNumber block) const {
+  if (block.value >= blocks_.size()) {
+    return 0;
+  }
+  return blocks_[block.value].erase_count;
+}
 }  // namespace vincentftl
