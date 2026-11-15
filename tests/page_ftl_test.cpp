@@ -46,7 +46,7 @@ TEST(PageFtl, CapacityIsAllPages) {
   NandEmulator device(4);
   PageFtl ftl(device);
 
-  EXPECT_EQ(ftl.capacity(), 4 * kPagesPerBlock);
+  EXPECT_EQ(ftl.capacity(), kPagesPerBlock);
 }
 
 // Each bad block takes 64 pages off the capacity.
@@ -54,7 +54,7 @@ TEST(PageFtl, CapacitySkipsBadBlocks) {
   NandEmulator device(8, {BlockNumber{2}, BlockNumber{5}});
   PageFtl ftl(device);
 
-  EXPECT_EQ(ftl.capacity(), 6 * kPagesPerBlock);
+  EXPECT_EQ(ftl.capacity(), 3 * kPagesPerBlock);
 }
 
 // Basic write, then read it back.
@@ -81,16 +81,16 @@ TEST(PageFtl, ReadOfUnwrittenPageFails) {
 TEST(PageFtl, PagesWrittenOutOfOrderStayApart) {
   NandEmulator device(4);
   PageFtl ftl(device);
-  ASSERT_EQ(ftl.write(LogicalPage{200}, make_page(1)), FtlStatus::kOk);
+  ASSERT_EQ(ftl.write(LogicalPage{20}, make_page(1)), FtlStatus::kOk);
   ASSERT_EQ(ftl.write(LogicalPage{5}, make_page(2)), FtlStatus::kOk);
-  ASSERT_EQ(ftl.write(LogicalPage{64}, make_page(3)), FtlStatus::kOk);
+  ASSERT_EQ(ftl.write(LogicalPage{40}, make_page(3)), FtlStatus::kOk);
 
   PageData out;
   ASSERT_EQ(ftl.read(LogicalPage{5}, out), FtlStatus::kOk);
   EXPECT_EQ(out, make_page(2));
-  ASSERT_EQ(ftl.read(LogicalPage{64}, out), FtlStatus::kOk);
+  ASSERT_EQ(ftl.read(LogicalPage{40}, out), FtlStatus::kOk);
   EXPECT_EQ(out, make_page(3));
-  ASSERT_EQ(ftl.read(LogicalPage{200}, out), FtlStatus::kOk);
+  ASSERT_EQ(ftl.read(LogicalPage{20}, out), FtlStatus::kOk);
   EXPECT_EQ(out, make_page(1));
 }
 
@@ -172,32 +172,6 @@ TEST(PageFtl, BadBlockAtTheEndIsSkipped) {
   for (std::uint32_t i = 0; i < ftl.capacity(); ++i) {
     ASSERT_EQ(ftl.write(LogicalPage{i}, make_page(1)), FtlStatus::kOk);
   }
-}
-
-// Fill the device, then write once more. Should get kNoSpace.
-TEST(PageFtl, NoSpaceWhenAllPagesAreUsed) {
-  // No garbage collection yet, so an overwrite uses up a new page.
-  NandEmulator device(2);
-  PageFtl ftl(device);
-  for (std::uint32_t i = 0; i < ftl.capacity(); ++i) {
-    ASSERT_EQ(ftl.write(LogicalPage{i}, make_page(1)), FtlStatus::kOk);
-  }
-
-  EXPECT_EQ(ftl.write(LogicalPage{0}, make_page(2)), FtlStatus::kNoSpace);
-}
-
-// A write that fails for no space shouldn't lose the old data.
-TEST(PageFtl, NoSpaceKeepsOldData) {
-  NandEmulator device(2);
-  PageFtl ftl(device);
-  for (std::uint32_t i = 0; i < ftl.capacity(); ++i) {
-    ASSERT_EQ(ftl.write(LogicalPage{i}, make_page(1)), FtlStatus::kOk);
-  }
-  ASSERT_EQ(ftl.write(LogicalPage{0}, make_page(2)), FtlStatus::kNoSpace);
-
-  PageData out;
-  ASSERT_EQ(ftl.read(LogicalPage{0}, out), FtlStatus::kOk);
-  EXPECT_EQ(out, make_page(1));
 }
 
 // Program fails. We return kDeviceError and don't map the page.

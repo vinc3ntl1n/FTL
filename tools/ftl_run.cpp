@@ -12,6 +12,7 @@
 //   --writes N          random writes after the first full pass (default 100,000; 2,000 on the
 //   chip)
 //   --hot-cold          send 9 of every 10 writes to the first tenth of the pages
+//   --wear-leveling     enable dynamic and static wear leveling
 //   --seed N            change the random writes (default 1)
 //   --bad-blocks FILE   the chip's bad-block list from tools/pi/scan_bad_blocks.py (--chip only)
 //   --speed HZ          SPI clock (default 1,000,000; try 8,000,000 once the chip works)
@@ -42,6 +43,7 @@ struct Options {
   std::uint32_t blocks = 32;
   std::uint32_t writes = 0;  // 0 means the default for the device
   bool hot_cold = false;
+  bool wear_leveling = false;
   std::uint32_t seed = 1;
   std::string bad_blocks;
   std::uint32_t speed_hz = 1'000'000;
@@ -80,6 +82,8 @@ Options parse(int argc, char** argv) {
       options.writes = number();
     } else if (arg == "--hot-cold") {
       options.hot_cold = true;
+    } else if (arg == "--wear-leveling") {
+      options.wear_leveling = true;
     } else if (arg == "--seed") {
       options.seed = number();
     } else if (arg == "--bad-blocks") {
@@ -161,7 +165,7 @@ bool erase_everything(W25nDevice& chip) {
 
 int run(const Options& options, NandDevice& device) {
   CountingDevice counted(device);
-  PageFtl ftl(counted);
+  PageFtl ftl(counted, options.wear_leveling ? WearLeveling::kOn : WearLeveling::kOff);
   ReferenceFtl reference(ftl.capacity());
   if (ftl.capacity() == 0) {
     std::cerr << "The FTL has no room on " << options.blocks << " blocks. Use more.\n";
